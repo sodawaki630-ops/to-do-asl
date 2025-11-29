@@ -1,183 +1,76 @@
 import streamlit as st
-import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Beautiful To-Do App", layout="centered")
+st.set_page_config(page_title="To-Do App", page_icon="📝", layout="centered")
 
-# HTML + CSS + JS ฝังใน Streamlit
-html_code = """
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+# ---- Custom CSS ----
+st.markdown("""
 <style>
 body {
-  margin: 0;
-  padding: 0;
-  font-family: "Prompt", sans-serif;
-  background: linear-gradient(135deg, #a8c0ff, #fbc2eb);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    font-family: 'Segoe UI', sans-serif;
 }
 
-.app-container {
-  width: 90%;
-  max-width: 420px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(15px);
-  padding: 25px;
-  border-radius: 25px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+.container {
+    background: #ffffffcc;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    width: 380px;
+    margin: auto;
 }
 
-.title {
-  text-align: center;
-  font-size: 2.2rem;
-  font-weight: 600;
-  margin-bottom: 25px;
-  color: #333;
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    font-weight: bold;
+    margin-bottom: 25px;
 }
 
-.input-box {
-  display: flex;
-  background: white;
-  border-radius: 15px;
-  padding: 10px 12px;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
-}
-
-.input-box input {
-  flex: 1;
-  border: none;
-  font-size: 1rem;
-  outline: none;
+.task {
+    background: #e8f0ff;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 10px;
 }
 
 .add-btn {
-  width: 45px;
-  height: 45px;
-  border: none;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4facfe, #00f2fe);
-  color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  box-shadow: 0 5px 12px rgba(0,0,0,0.15);
-  transition: 0.2s;
-}
-
-.add-btn:hover {
-  transform: scale(1.08);
-}
-
-.task-list {
-  list-style: none;
-  padding: 0;
-  margin-top: 25px;
-}
-
-.task-list li {
-  background: white;
-  padding: 14px 18px;
-  border-radius: 15px;
-  margin-bottom: 15px;
-  box-shadow: 0 7px 14px rgba(0,0,0,0.12);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-}
-
-.task-text {
-  font-size: 1rem;
-  color: #333;
-  flex: 1;
-}
-
-.completed .task-text {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
-.del-btn {
-  background: #ff6b81;
-  border: none;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.del-btn:hover {
-  background: #ff4757;
-  transform: scale(1.05);
+    background: #007bff;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
 }
 </style>
-</head>
+""", unsafe_allow_html=True)
 
-<body>
+# ---- App Layout ----
+st.markdown("<div class='container'>", unsafe_allow_html=True)
 
-<div class="app-container">
+st.markdown("## 📝 To-Do List")
 
-  <h1 class="title">✨ My Tasks</h1>
+# Session state initialized
+if "tasks" not in st.session_state:
+    st.session_state.tasks = []
 
-  <div class="input-box">
-    <input id="taskInput" type="text" placeholder="เพิ่มงานใหม่..." />
-    <button class="add-btn" onclick="addTask()">+</button>
-  </div>
+# Add task
+new_task = st.text_input("เพิ่มงานใหม่:")
+if st.button("เพิ่มงาน"):
+    if new_task.strip() != "":
+        st.session_state.tasks.append({"text": new_task, "done": False})
+        st.experimental_rerun()
 
-  <ul id="taskList" class="task-list"></ul>
+# Show tasks
+for i, task in enumerate(st.session_state.tasks):
+    col1, col2 = st.columns([0.1, 0.9])
+    with col1:
+        done = st.checkbox("", value=task["done"], key=f"task_{i}")
+        st.session_state.tasks[i]["done"] = done
+    with col2:
+        text = f"✔️ ~~{task['text']}~~" if task["done"] else task["text"]
+        st.markdown(f"<div class='task'>{text}</div>", unsafe_allow_html=True)
 
-</div>
+# Clear completed
+if st.button("ลบงานที่ทำเสร็จแล้ว"):
+    st.session_state.tasks = [t for t in st.session_state.tasks if not t["done"]]
+    st.experimental_rerun()
 
-<script>
-let tasks = [];
-
-function renderTasks() {
-  const list = document.getElementById("taskList");
-  list.innerHTML = "";
-
-  tasks.forEach((task, index) => {
-    const li = document.createElement("li");
-    li.className = task.done ? "completed" : "";
-
-    li.innerHTML = `
-      <span class="task-text" onclick="toggleTask(${index})">${task.text}</span>
-      <button class="del-btn" onclick="removeTask(${index})">ลบ</button>
-    `;
-
-    list.appendChild(li);
-  });
-}
-
-function addTask() {
-  const input = document.getElementById("taskInput");
-  if (input.value.trim() === "") return;
-
-  tasks.push({ text: input.value.trim(), done: false });
-  input.value = "";
-  renderTasks();
-}
-
-function toggleTask(index) {
-  tasks[index].done = !tasks[index].done;
-  renderTasks();
-}
-
-function removeTask(index) {
-  tasks.splice(index, 1);
-  renderTasks();
-}
-
-renderTasks();
-</script>
-
-</body>
-</html>
-"""
-
-components.html(html_code, height=700, scrolling=True)
+st.markdown("</div>", unsafe_allow_html=True)
