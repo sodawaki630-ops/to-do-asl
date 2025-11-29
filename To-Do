@@ -1,76 +1,73 @@
 import streamlit as st
 
+# ------------------- CONFIG -------------------
 st.set_page_config(page_title="To-Do App", page_icon="📝", layout="centered")
 
-# ---- Custom CSS ----
+# ------------------- CUSTOM UI STYLE -------------------
 st.markdown("""
 <style>
-body {
-    font-family: 'Segoe UI', sans-serif;
+.main {
+    background-color: #f2f4f8;
 }
 
-.container {
-    background: #ffffffcc;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    width: 380px;
+.todo-card {
+    background: white;
+    padding: 20px;
+    border-radius: 18px;
+    box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
+    width: 420px;
     margin: auto;
 }
 
-h1 {
-    text-align: center;
-    color: #2c3e50;
-    font-weight: bold;
-    margin-bottom: 25px;
-}
-
-.task {
-    background: #e8f0ff;
-    padding: 12px;
+.task-box {
+    background: #e7f0ff;
+    padding: 10px;
     border-radius: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
-.add-btn {
-    background: #007bff;
-    color: white;
-    padding: 10px 18px;
-    border-radius: 8px;
-    border: none;
+input, textarea {
+    border-radius: 8px !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
-# ---- App Layout ----
-st.markdown("<div class='container'>", unsafe_allow_html=True)
-
-st.markdown("## 📝 To-Do List")
-
-# Session state initialized
+# ------------------- SESSION STATE -------------------
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# Add task
-new_task = st.text_input("เพิ่มงานใหม่:")
-if st.button("เพิ่มงาน"):
-    if new_task.strip() != "":
-        st.session_state.tasks.append({"text": new_task, "done": False})
-        st.experimental_rerun()
+# ------------------- UI -------------------
+st.markdown("<div class='todo-card'>", unsafe_allow_html=True)
 
-# Show tasks
+st.markdown("## 📝 To-Do List")
+
+new_task = st.text_input("เพิ่มงานใหม่:")
+
+if st.button("เพิ่มงาน"):
+    if new_task.strip():
+        st.session_state.tasks.append({"text": new_task, "done": False})
+        st.rerun()
+
+# ------------------- SHOW TASKS -------------------
 for i, task in enumerate(st.session_state.tasks):
-    col1, col2 = st.columns([0.1, 0.9])
+    col1, col2 = st.columns([0.15, 0.85])
     with col1:
         done = st.checkbox("", value=task["done"], key=f"task_{i}")
         st.session_state.tasks[i]["done"] = done
     with col2:
-        text = f"✔️ ~~{task['text']}~~" if task["done"] else task["text"]
-        st.markdown(f"<div class='task'>{text}</div>", unsafe_allow_html=True)
+        if task["done"]:
+            st.markdown(
+                f"<div class='task-box'>✔️ <s>{task['text']}</s></div>",
+                unsafe_allow_html=True)
+        else:
+            st.markdown(
+                f"<div class='task-box'>{task['text']}</div>",
+                unsafe_allow_html=True)
 
-# Clear completed
+# ------------------- CLEAR COMPLETED -------------------
 if st.button("ลบงานที่ทำเสร็จแล้ว"):
     st.session_state.tasks = [t for t in st.session_state.tasks if not t["done"]]
-    st.experimental_rerun()
+    st.rerun()
 
 st.markdown("</div>", unsafe_allow_html=True)
