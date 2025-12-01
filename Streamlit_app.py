@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from datetime import datetime as dt, date
 
-st.set_page_config(page_title="To-Do App", page_icon="📝", layout="wide")
+st.set_page_config(page_title="To-Do App Animated", page_icon="📝", layout="wide")
 
 # -------------------- CSS --------------------
 st.markdown("""
@@ -25,13 +25,13 @@ body {
     box-shadow: 0 6px 18px rgba(0,0,0,0.15);
 }
 
-/* New Card Animation */
+/* Animation: Slide-in + Fade */
 .task-card.new {
-    animation: cardPop 0.6s ease-out;
+    animation: slideFade 0.7s ease-out;
 }
-@keyframes cardPop {
-    0% { opacity: 0; transform: translateY(25px) scale(0.95); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes slideFade {
+    0% {opacity: 0; transform: translateX(50px);}
+    100% {opacity: 1; transform: translateX(0);}
 }
 
 /* Deadline text */
@@ -64,12 +64,16 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     opacity: 0;
     transform: translateY(-20px);
-    animation: popupFade 0.7s forwards;
+    animation: popupShow 0.5s forwards, popupFadeOut 0.5s 2.5s forwards;
     z-index:999;
 }
-@keyframes popupFade {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes popupShow {
+    from {opacity: 0; transform: translateY(-20px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+@keyframes popupFadeOut {
+    from {opacity:1;}
+    to {opacity:0; transform: translateY(-20px);}
 }
 </style>
 """, unsafe_allow_html=True)
@@ -79,7 +83,7 @@ if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
 # -------------------- Title --------------------
-st.title("📝 To-Do App (Complete Version)")
+st.title("📝 To-Do App Animated")
 
 # -------------------- Add Task --------------------
 st.subheader("➕ เพิ่มงานใหม่")
