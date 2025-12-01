@@ -4,7 +4,7 @@ from datetime import datetime as dt, date
 import base64
 
 # -------------------- Config --------------------
-st.set_page_config(page_title="🎄 Ultimate Christmas To-Do App 📝", layout="wide")
+st.set_page_config(page_title="🎄 ASL To-Do App 📝", layout="wide")
 
 # -------------------- Dark Mode --------------------
 dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
