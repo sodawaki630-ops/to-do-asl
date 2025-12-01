@@ -4,10 +4,12 @@ import json
 from datetime import datetime as dt, date
 from streamlit_sortable import sortable_grid
 from fpdf import FPDF
+import plotly.express as px
 
-st.set_page_config(page_title="To-Do Ultimate", page_icon="📝", layout="wide")
+# ---------------- Config ----------------
+st.set_page_config(page_title="To-Do Ultimate Pro", page_icon="📝", layout="wide")
 
-# ---------------- Theme ----------------
+# ---------------- Dark / Light Mode ----------------
 dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
 if dark_mode:
     BG = "#2c2f33"
@@ -20,7 +22,7 @@ else:
     TEXT = "#111"
     PROG_FILL = "#4caf50"
 
-# ---------------- CSS ----------------
+# ---------------- CSS Styling ----------------
 st.markdown(f"""
 <style>
 body {{
@@ -37,7 +39,7 @@ body {{
     transition: all 0.3s ease;
 }}
 .task-card:hover {{
-    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }}
 .task-card.new {{
     animation: slideFade 0.6s ease-out;
@@ -101,7 +103,44 @@ if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
 # ---------------- Title ----------------
-st.title("📝 To-Do Ultimate")
+st.title("📝 To-Do Ultimate Pro")
+
+# ---------------- Sidebar ----------------
+st.sidebar.header("📤 Export / Import / Filter")
+with st.sidebar.expander("แชร์ / นำเข้า JSON"):
+    exported = json.dumps(st.session_state.tasks, ensure_ascii=False, indent=2)
+    st.code(exported, language='json')
+    uploaded = st.file_uploader("อัปโหลด JSON เพื่อโหลดงานใหม่", type=['json'])
+    if uploaded:
+        try:
+            data = json.load(uploaded)
+            st.session_state.tasks = data
+            st.success("โหลดงานจาก JSON เรียบร้อย!")
+        except:
+            st.error("ไฟล์ JSON ไม่ถูกต้อง")
+
+# Export PDF / Excel / CSV
+st.sidebar.markdown("---")
+if st.sidebar.button("Export → PDF"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for t in st.session_state.tasks:
+        pdf.cell(0, 8, f"{t.get('name')} | {t.get('deadline')} | {t.get('category','-')} | {t.get('progress',0)}%", ln=True)
+    pdf.output("todo_report.pdf")
+    st.success("Exported todo_report.pdf")
+if st.sidebar.button("Export → Excel"):
+    df = pd.DataFrame(st.session_state.tasks)
+    df.to_excel("todo_export.xlsx", index=False)
+    st.success("Exported todo_export.xlsx")
+if st.sidebar.button("Export → CSV"):
+    df = pd.DataFrame(st.session_state.tasks)
+    df.to_csv("todo_export.csv", index=False)
+    st.success("Exported todo_export.csv")
+
+# Filter
+filter_done = st.sidebar.selectbox("แสดงงาน:", options=["ทั้งหมด","งานที่ยังไม่เสร็จ","งานที่เสร็จแล้ว"])
+filter_category = st.sidebar.text_input("Filter หมวดหมู่ (ใส่ชื่อ)")
 
 # ---------------- Add Task ----------------
 st.header("➕ เพิ่มงานใหม่")
@@ -124,15 +163,28 @@ with st.form("form_new_task", clear_on_submit=True):
         st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
 
 # ---------------- Task List ----------------
-st.header("📋 รายการงาน")
+st.header("📋 รายการงาน (ลากเพื่อจัดลำดับ)")
 
 tasks_list = st.session_state.tasks.copy()
+# Filter by status / category
+if filter_done=="งานที่ยังไม่เสร็จ":
+    tasks_list = [t for t in tasks_list if not t.get("completed")]
+elif filter_done=="งานที่เสร็จแล้ว":
+    tasks_list = [t for t in tasks_list if t.get("completed")]
+if filter_category:
+    tasks_list = [t for t in tasks_list if t.get("category") == filter_category]
+
 new_order = sortable_grid(tasks_list, key="sortable-1")
 if new_order:
     st.session_state.tasks = new_order
 
 today = dt.now().date()
 for i, task in enumerate(st.session_state.tasks):
+    # Skip if filtered
+    if filter_done=="งานที่ยังไม่เสร็จ" and task.get("completed"): continue
+    if filter_done=="งานที่เสร็จแล้ว" and not task.get("completed"): continue
+    if filter_category and task.get("category") != filter_category: continue
+
     card_class = "task-card new" if task.get("new") else "task-card"
     if task.get("remove"):
         card_class += " remove"
@@ -170,19 +222,15 @@ if day_tasks:
 else:
     st.info("ไม่พบงาน")
 
-# ---------------- Export PDF ----------------
-st.header("📄 Export PDF")
-if st.button("Export PDF"):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    for t in st.session_state.tasks:
-        pdf.cell(0, 8, f"{t.get('name')} | {t.get('deadline')} | {t.get('category','-')} | {t.get('progress',0)}%", ln=True)
-    pdf.output("todo_report.pdf")
-    st.success("Exported todo_report.pdf")
+# ---------------- Dashboard Charts ----------------
+st.header("📊 Dashboard สรุปงาน")
+if st.session_state.tasks:
+    df = pd.DataFrame(st.session_state.tasks)
+    df['completed'] = df['completed'].apply(lambda x: 1 if x else 0)
+    fig = px.pie(df, names='category', values='progress', title="ความคืบหน้าแยกตามหมวดหมู่")
+    st.plotly_chart(fig, use_container_width=True)
 
 # ---------------- Summary ----------------
-st.header("📊 สรุปงาน")
 total = len(st.session_state.tasks)
 done = sum(1 for t in st.session_state.tasks if t.get("completed"))
 if total>0:
