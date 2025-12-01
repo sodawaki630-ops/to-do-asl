@@ -1,73 +1,174 @@
 import streamlit as st
+import json
+import datetime
+from datetime import datetime as dt
 
-# ------------------- CONFIG -------------------
-st.set_page_config(page_title="To-Do App", page_icon="📝", layout="centered")
+st.set_page_config(page_title="To-Do App", page_icon="📝", layout="wide")
 
-# ------------------- CUSTOM UI STYLE -------------------
+# -------------------- CSS --------------------
 st.markdown("""
 <style>
-.main {
-    background-color: #f2f4f8;
+body {
+    background: linear-gradient(120deg, #f6f9fc, #eef2f3);
+    font-family: 'Segoe UI';
 }
 
-.todo-card {
+/* Task Card */
+.task-card {
     background: white;
-    padding: 20px;
-    border-radius: 18px;
-    box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
-    width: 420px;
-    margin: auto;
+    padding: 18px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    transition: 0.3s;
+}
+.task-card:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
 }
 
-.task-box {
-    background: #e7f0ff;
-    padding: 10px;
+/* New Card Animation */
+.task-card.new {
+    animation: cardPop 0.6s ease-out;
+}
+@keyframes cardPop {
+    0% { opacity: 0; transform: translateY(25px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Deadline text */
+.deadline-text {
+    color: #ff4b4b;
+    font-weight: 600;
+}
+
+/* Progress bar */
+.progress-bar {
+    height: 10px;
     border-radius: 10px;
-    margin-bottom: 8px;
+    background: #e5e5e5;
+}
+.progress-fill {
+    height: 10px;
+    border-radius: 10px;
+    background: #4CAF50;
 }
 
-input, textarea {
-    border-radius: 8px !important;
+/* Popup Notification */
+.popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: popupFade 0.7s forwards;
 }
-
+@keyframes popupFade {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------- SESSION STATE -------------------
+# -------------------- Session State --------------------
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# ------------------- UI -------------------
-st.markdown("<div class='todo-card'>", unsafe_allow_html=True)
+# -------------------- Add Task --------------------
+st.title("📝 To-Do List App (Enhanced Version)")
 
-st.markdown("## 📝 To-Do List")
+st.subheader("➕ เพิ่มงานใหม่")
 
-new_task = st.text_input("เพิ่มงานใหม่:")
+col1, col2 = st.columns(2)
+with col1:
+    task_name = st.text_input("ชื่องาน")
+with col2:
+    deadline = st.date_input("เดดไลน์", value=datetime.date.today())
+
+progress = st.slider("ความคืบหน้า (%)", 0, 100, 0)
 
 if st.button("เพิ่มงาน"):
-    if new_task.strip():
-        st.session_state.tasks.append({"text": new_task, "done": False})
-        st.rerun()
+    st.session_state.tasks.append({
+        "name": task_name,
+        "deadline": str(deadline),
+        "progress": progress,
+        "completed": False,
+        "new": True
+    })
 
-# ------------------- SHOW TASKS -------------------
+    st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
+
+# -------------------- Show Tasks --------------------
+st.subheader("📌 รายการงาน")
+
+now = dt.now().date()
+
 for i, task in enumerate(st.session_state.tasks):
-    col1, col2 = st.columns([0.15, 0.85])
-    with col1:
-        done = st.checkbox("", value=task["done"], key=f"task_{i}")
-        st.session_state.tasks[i]["done"] = done
-    with col2:
-        if task["done"]:
-            st.markdown(
-                f"<div class='task-box'>✔️ <s>{task['text']}</s></div>",
-                unsafe_allow_html=True)
-        else:
-            st.markdown(
-                f"<div class='task-box'>{task['text']}</div>",
-                unsafe_allow_html=True)
+    deadline_date = dt.strptime(task["deadline"], "%Y-%m-%d").date()
+    remaining_days = (deadline_date - now).days
 
-# ------------------- CLEAR COMPLETED -------------------
-if st.button("ลบงานที่ทำเสร็จแล้ว"):
-    st.session_state.tasks = [t for t in st.session_state.tasks if not t["done"]]
-    st.rerun()
+    card_class = "task-card new" if task.get("new") else "task-card"
+    st.markdown(f"<div class='{card_class}'>", unsafe_allow_html=True)
 
-st.markdown("</div>", unsafe_allow_html=True)
+    colA, colB = st.columns([6, 1])
+
+    with colA:
+        st.markdown(f"### {task['name']}")
+        st.markdown(
+            f"🗓 เดดไลน์: <span class='deadline-text'>{task['deadline']}</span>",
+            unsafe_allow_html=True
+        )
+
+        st.markdown("ความคืบหน้า:")
+        st.markdown(
+            f"""
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:{task['progress']}%"></div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        if remaining_days <= 1:
+            st.audio("https://upload.wikimedia.org/wikipedia/commons/c/cf/Alert-tone.mp3")
+            st.warning("⏰ งานนี้ใกล้ถึงเดดไลน์แล้ว!")
+
+    with colB:
+        if st.button("✔", key=f"done{i}"):
+            task["completed"] = True
+            st.success("งานเสร็จแล้ว!")
+
+        if st.button("🗑", key=f"delete{i}"):
+            st.session_state.tasks.pop(i)
+            st.rerun()
+
+    task["new"] = False
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------- Calendar --------------------
+st.subheader("📅 ปฏิทินงาน")
+
+calendar_date = st.date_input("เลือกวันที่เพื่อดูงานของวันนั้น", value=now)
+
+day_tasks = [
+    t for t in st.session_state.tasks
+    if t["deadline"] == str(calendar_date)
+]
+
+if day_tasks:
+    st.write("งานของวันนั้น:")
+    for t in day_tasks:
+        st.write("- ", t["name"])
+else:
+    st.write("ไม่มีงานในวันนี้")
+
+# -------------------- Share Tasks --------------------
+st.subheader("📤 แชร์งานให้เพื่อน")
+
+export_data = json.dumps(st.session_state.tasks)
+st.code(export_data, language="json")
+st.info("เพื่อนนำ JSON นี้ไปวางในแอปได้เลยเพื่อโหลดงานเข้าไป")
