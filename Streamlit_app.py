@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import json
 from datetime import datetime as dt, date
-from streamlit_sortable import sortable_grid
 from fpdf import FPDF
 import plotly.express as px
 
@@ -103,7 +102,7 @@ if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
 # ---------------- Title ----------------
-st.title("📝 To-Do Ultimate Pro")
+st.title("📝 To-Do Ultimate Pro (No Drag & Drop)")
 
 # ---------------- Sidebar ----------------
 st.sidebar.header("📤 Export / Import / Filter")
@@ -163,24 +162,11 @@ with st.form("form_new_task", clear_on_submit=True):
         st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
 
 # ---------------- Task List ----------------
-st.header("📋 รายการงาน (ลากเพื่อจัดลำดับ)")
-
-tasks_list = st.session_state.tasks.copy()
-# Filter by status / category
-if filter_done=="งานที่ยังไม่เสร็จ":
-    tasks_list = [t for t in tasks_list if not t.get("completed")]
-elif filter_done=="งานที่เสร็จแล้ว":
-    tasks_list = [t for t in tasks_list if t.get("completed")]
-if filter_category:
-    tasks_list = [t for t in tasks_list if t.get("category") == filter_category]
-
-new_order = sortable_grid(tasks_list, key="sortable-1")
-if new_order:
-    st.session_state.tasks = new_order
+st.header("📋 รายการงาน")
 
 today = dt.now().date()
 for i, task in enumerate(st.session_state.tasks):
-    # Skip if filtered
+    # Filter
     if filter_done=="งานที่ยังไม่เสร็จ" and task.get("completed"): continue
     if filter_done=="งานที่เสร็จแล้ว" and not task.get("completed"): continue
     if filter_category and task.get("category") != filter_category: continue
@@ -188,6 +174,7 @@ for i, task in enumerate(st.session_state.tasks):
     card_class = "task-card new" if task.get("new") else "task-card"
     if task.get("remove"):
         card_class += " remove"
+
     st.markdown(f"<div class='{card_class}'>", unsafe_allow_html=True)
     col1, col2 = st.columns([6,1])
     with col1:
