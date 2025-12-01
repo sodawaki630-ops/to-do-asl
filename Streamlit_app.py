@@ -3,61 +3,74 @@ import json
 from datetime import datetime as dt, date
 
 # -------------------- Config --------------------
-st.set_page_config(page_title="Ultimate To-Do App with Subtasks", page_icon="📝", layout="wide")
+st.set_page_config(page_title="Ultimate Mobile To-Do App", page_icon="📝", layout="wide")
+
+# -------------------- Dark Mode --------------------
+dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
+if dark_mode:
+    BG = "#1c1c1c"
+    CARD_BG = "#2c2f33"
+    TEXT = "#e4e6eb"
+    PROG_FILL = "#4caf50"
+else:
+    BG = "linear-gradient(120deg, #f6f9fc, #eef2f3)"
+    CARD_BG = "white"
+    TEXT = "#111"
+    PROG_FILL = "#4caf50"
 
 # -------------------- CSS --------------------
-st.markdown("""
+st.markdown(f"""
 <style>
-body {
-    background: linear-gradient(120deg, #f6f9fc, #eef2f3);
-    font-family: 'Segoe UI';
-}
+body {{
+    background: {BG};
+    color: {TEXT};
+    font-family: 'Segoe UI', sans-serif;
+}}
 
 /* Task Card */
-.task-card {
+.task-card {{
+    background: {CARD_BG};
     padding: 18px;
-    border-radius: 15px;
+    border-radius: 18px;
     margin-bottom: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    transition: 0.3s;
-}
-.task-card:hover {
-    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-}
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}}
+.task-card:hover {{
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}}
+.task-card.new {{
+    animation: slideFade 0.7s ease-out;
+}}
+@keyframes slideFade {{
+    0% {{opacity: 0; transform: translateX(50px);}}
+    100% {{opacity: 1; transform: translateX(0);}}
+}}
 
 /* Priority Colors */
-.priority-high {background-color:#ff4b4b; color:white;}
-.priority-medium {background-color:white; color:black;}
-.priority-low {background-color:#111; color:white;}
+.priority-high {{background-color:#ff4b4b; color:white;}}
+.priority-medium {{background-color:#ffffff; color:black;}}
+.priority-low {{background-color:#111; color:white;}}
 
-/* Animation: Slide-in + Fade */
-.task-card.new {
-    animation: slideFade 0.7s ease-out;
-}
-@keyframes slideFade {
-    0% {opacity: 0; transform: translateX(50px);}
-    100% {opacity: 1; transform: translateX(0);}
-}
-
-/* Deadline text */
-.deadline-text {
+/* Deadline */
+.deadline-text {{
     font-weight: 600;
-}
+}}
 
-/* Progress bar */
-.progress-bar {
+/* Progress Bar */
+.progress-bar {{
     height: 10px;
     border-radius: 10px;
     background: #e5e5e5;
-}
-.progress-fill {
+}}
+.progress-fill {{
     height: 10px;
     border-radius: 10px;
-    background: #4CAF50;
-}
+    background: {PROG_FILL};
+}}
 
-/* Popup Notification */
-.popup {
+/* Popup */
+.popup {{
     position: fixed;
     top: 20px;
     right: 20px;
@@ -70,31 +83,32 @@ body {
     transform: translateY(-20px);
     animation: popupShow 0.5s forwards, popupFadeOut 0.5s 2.5s forwards;
     z-index:999;
-}
-@keyframes popupShow {
-    from {opacity: 0; transform: translateY(-20px);}
-    to {opacity: 1; transform: translateY(0);}
-}
-@keyframes popupFadeOut {
-    from {opacity:1;}
-    to {opacity:0; transform: translateY(-20px);}
-}
-button:hover {
+}}
+@keyframes popupShow {{
+    from {{opacity: 0; transform: translateY(-20px);}}
+    to {{opacity: 1; transform: translateY(0);}}
+}}
+@keyframes popupFadeOut {{
+    from {{opacity:1;}}
+    to {{opacity:0; transform: translateY(-20px);}}
+}}
+
+/* Animated Buttons */
+button:hover {{
     transform: scale(1.1);
     transition: transform 0.2s;
-}
+}}
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------- Session State --------------------
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
-
 if "sound_played" not in st.session_state:
     st.session_state.sound_played = set()
 
 # -------------------- Title --------------------
-st.title("📝 Ultimate To-Do App with Subtasks")
+st.title("📝 Ultimate Mobile To-Do App")
 
 # -------------------- Add Task --------------------
 st.subheader("➕ เพิ่มงานใหม่")
@@ -114,8 +128,6 @@ for i in range(num_sub):
     sub_name = st.text_input(f"งานย่อย {i+1} ชื่อ", key=f"sub{i}")
     subtasks.append({"name": sub_name, "completed": False})
 
-progress = 0  # Progress จะคำนวณจากงานย่อย
-
 if st.button("เพิ่มงาน"):
     st.session_state.tasks.append({
         "name": task_name,
@@ -130,7 +142,7 @@ if st.button("เพิ่มงาน"):
 
 # -------------------- Filter --------------------
 st.subheader("🔎 กรองงาน")
-filter_category = st.text_input("กรองตามหมวดหมู่ (Category)")
+filter_category = st.text_input("กรองตามหมวดหมู่")
 filter_priority = st.selectbox("กรองตาม Priority", ["All","High","Medium","Low"])
 
 # -------------------- Progress Summary --------------------
@@ -146,7 +158,6 @@ else:
 st.subheader("📌 รายการงาน")
 today = dt.now().date()
 for i, task in enumerate(st.session_state.tasks):
-    # Filter
     if filter_category and task["category"] != filter_category:
         continue
     if filter_priority != "All" and task["priority"] != filter_priority:
@@ -186,7 +197,7 @@ for i, task in enumerate(st.session_state.tasks):
             unsafe_allow_html=True
         )
 
-        # แสดงงานย่อย
+        # Sub-task
         if task["subtasks"]:
             st.markdown("**งานย่อย:**")
             for j, sub in enumerate(task["subtasks"]):
@@ -199,7 +210,7 @@ for i, task in enumerate(st.session_state.tasks):
                     else:
                         sub["completed"] = False
 
-        # แจ้งเตือนเสียงถ้าใกล้เดดไลน์
+        # แจ้งเตือนเสียง
         deadline_date = dt.strptime(task["deadline"], "%Y-%m-%d").date()
         remaining_days = (deadline_date - today).days
         if remaining_days <= 1 and not task["completed"] and task["name"] not in st.session_state.sound_played:
@@ -209,7 +220,6 @@ for i, task in enumerate(st.session_state.tasks):
 
     with colB:
         if st.button("✔", key=f"done{i}"):
-            # ทำงานหลักเสร็จ = ทำงานย่อยทั้งหมดเสร็จด้วย
             for sub in task["subtasks"]:
                 sub["completed"] = True
             task["completed"] = True
