@@ -2,7 +2,8 @@ import streamlit as st
 import json
 from datetime import datetime as dt, date
 
-st.set_page_config(page_title="To-Do App Animated", page_icon="📝", layout="wide")
+# -------------------- Config --------------------
+st.set_page_config(page_title="Ultimate To-Do App", page_icon="📝", layout="wide")
 
 # -------------------- CSS --------------------
 st.markdown("""
@@ -75,6 +76,10 @@ body {
     from {opacity:1;}
     to {opacity:0; transform: translateY(-20px);}
 }
+button:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,16 +87,21 @@ body {
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
+if "sound_played" not in st.session_state:
+    st.session_state.sound_played = set()  # เก็บงานที่เล่นเสียงแล้ว
+
 # -------------------- Title --------------------
-st.title("📝 To-Do App Animated")
+st.title("📝 Ultimate Animated To-Do App")
 
 # -------------------- Add Task --------------------
 st.subheader("➕ เพิ่มงานใหม่")
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns([4,3,3])
 with col1:
     task_name = st.text_input("ชื่องาน")
 with col2:
     deadline = st.date_input("เดดไลน์", value=date.today())
+with col3:
+    category = st.text_input("หมวดหมู่")
 progress = st.slider("ความคืบหน้า (%)", 0, 100, 0)
 
 if st.button("เพิ่มงาน"):
@@ -99,16 +109,33 @@ if st.button("เพิ่มงาน"):
         "name": task_name,
         "deadline": str(deadline),
         "progress": progress,
+        "category": category.strip(),
         "completed": False,
         "new": True
     })
-    # Popup แจ้งเตือน
     st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
+
+# -------------------- Filter --------------------
+st.subheader("🔎 กรองงาน")
+filter_category = st.text_input("กรองตามหมวดหมู่ (Category)")
+
+# -------------------- Progress Summary --------------------
+total = len(st.session_state.tasks)
+done = sum(1 for t in st.session_state.tasks if t["completed"])
+if total > 0:
+    st.progress(done / total)
+    st.write(f"✔ งานเสร็จแล้ว {done}/{total} งาน")
+else:
+    st.write("ยังไม่มีงาน")
 
 # -------------------- Show Tasks --------------------
 st.subheader("📌 รายการงาน")
 today = dt.now().date()
 for i, task in enumerate(st.session_state.tasks):
+    # Filter by category
+    if filter_category and task["category"] != filter_category:
+        continue
+
     deadline_date = dt.strptime(task["deadline"], "%Y-%m-%d").date()
     remaining_days = (deadline_date - today).days
 
@@ -119,6 +146,8 @@ for i, task in enumerate(st.session_state.tasks):
     with colA:
         st.markdown(f"### {task['name']}")
         st.markdown(f"🗓 เดดไลน์: <span class='deadline-text'>{task['deadline']}</span>", unsafe_allow_html=True)
+        if task["category"]:
+            st.markdown(f"📂 หมวดหมู่: {task['category']}")
         st.markdown("ความคืบหน้า:")
         st.markdown(
             f"""
@@ -128,15 +157,19 @@ for i, task in enumerate(st.session_state.tasks):
             """,
             unsafe_allow_html=True
         )
-        # แจ้งเตือนเสียงถ้าใกล้เดดไลน์
-        if remaining_days <= 1 and not task["completed"]:
+
+        # แจ้งเตือนเสียงถ้าใกล้เดดไลน์ และเล่นแค่ครั้งเดียว
+        if remaining_days <= 1 and not task["completed"] and task["name"] not in st.session_state.sound_played:
             st.audio("https://upload.wikimedia.org/wikipedia/commons/c/cf/Alert-tone.mp3")
             st.warning(f"⏰ งานนี้ใกล้ถึงเดดไลน์แล้ว!")
+            st.session_state.sound_played.add(task["name"])
 
     with colB:
+        # ปุ่ม ✔ หน้า / 🗑 หลัง
         if st.button("✔", key=f"done{i}"):
             task["completed"] = True
             st.success("งานเสร็จแล้ว!")
+        st.write(" ")  # เว้นระยะ
         if st.button("🗑", key=f"delete{i}"):
             st.session_state.tasks.pop(i)
             st.rerun()
@@ -151,7 +184,7 @@ day_tasks = [t for t in st.session_state.tasks if t["deadline"] == str(calendar_
 if day_tasks:
     st.write("งานของวันนั้น:")
     for t in day_tasks:
-        st.write(f"- {t['name']} (ความคืบหน้า: {t['progress']}%)")
+        st.write(f"- {t['name']} (หมวดหมู่: {t['category']}, ความคืบหน้า: {t['progress']}%)")
 else:
     st.info("ไม่มีงานในวันนี้")
 
