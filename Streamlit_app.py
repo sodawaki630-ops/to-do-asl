@@ -3,6 +3,8 @@ import json
 from datetime import datetime as dt, date
 import pandas as pd
 import plotly.express as px
+import pdfkit
+import base64
 
 # -------------------- Config --------------------
 st.set_page_config(page_title="Ultimate Mobile To-Do App", page_icon="📝", layout="wide")
@@ -253,6 +255,54 @@ if st.session_state.tasks:
         st.download_button("📥 Export Excel", f, file_name=excel_file, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 else:
     st.info("ยังไม่มีงานเพื่อแสดง Dashboard")
+
+# -------------------- Heatmap Calendar --------------------
+st.subheader("📅 Heatmap Calendar")
+if st.session_state.tasks:
+    df = pd.DataFrame(st.session_state.tasks)
+    df['count'] = 1
+    heatmap_data = df.groupby('deadline')['count'].sum().reset_index()
+    heatmap_data['deadline'] = pd.to_datetime(heatmap_data['deadline'])
+    heatmap_fig = px.density_heatmap(
+        heatmap_data,
+        x=heatmap_data['deadline'].dt.day,
+        y=heatmap_data['deadline'].dt.month,
+        z='count',
+        labels={'x':'Day','y':'Month','z':'จำนวนงาน'},
+        title="จำนวนงานต่อวัน (Heatmap)"
+    )
+    st.plotly_chart(heatmap_fig, use_container_width=True)
+else:
+    st.info("ยังไม่มีงานสำหรับ Heatmap Calendar")
+
+# -------------------- Export PDF --------------------
+st.subheader("📄 Export PDF รายงาน")
+
+def generate_html_pdf(tasks):
+    html = f"<h1>รายงานงาน To-Do App</h1><ul>"
+    for t in tasks:
+        html += f"<li><b>{t['name']}</b> (เดดไลน์: {t['deadline']}, Category: {t['category']}, Priority: {t['priority']}, Progress: "
+        if t['subtasks']:
+            completed_sub = sum(1 for s in t['subtasks'] if s["completed"])
+            progress = int(completed_sub / len(t['subtasks']) * 100)
+        else:
+            progress = 100 if t['completed'] else 0
+        html += f"{progress}%)<ul>"
+        for sub in t['subtasks']:
+            html += f"<li>{sub['name']} - {'✔' if sub['completed'] else '❌'}</li>"
+        html += "</ul></li>"
+    html += "</ul>"
+    return html
+
+if st.button("📥 Export PDF"):
+    html_content = generate_html_pdf(st.session_state.tasks)
+    pdf_file = "tasks_report.pdf"
+    pdfkit.from_string(html_content, pdf_file)
+    with open(pdf_file, "rb") as f:
+        pdf_bytes = f.read()
+    b64 = base64.b64encode(pdf_bytes).decode()
+    href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_file}">Download PDF</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
 # -------------------- Share Tasks --------------------
 st.subheader("📤 แชร์งานให้เพื่อน")
