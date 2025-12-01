@@ -138,7 +138,7 @@ if "sound_played" not in st.session_state:
     st.session_state.sound_played = set()
 
 # -------------------- Title --------------------
-st.title("🎄 Ultimate Christmas To-Do App 📝")
+st.title("🎄 ASL To-Do App 📝")
 
 # -------------------- Add Task --------------------
 st.subheader("➕ เพิ่มงานใหม่")
