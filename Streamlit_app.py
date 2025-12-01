@@ -1,6 +1,8 @@
 import streamlit as st
 import json
 from datetime import datetime as dt, date
+import pandas as pd
+import plotly.express as px
 
 # -------------------- Config --------------------
 st.set_page_config(page_title="Ultimate Mobile To-Do App", page_icon="📝", layout="wide")
@@ -26,8 +28,6 @@ body {{
     color: {TEXT};
     font-family: 'Segoe UI', sans-serif;
 }}
-
-/* Task Card */
 .task-card {{
     background: {CARD_BG};
     padding: 18px;
@@ -46,30 +46,12 @@ body {{
     0% {{opacity: 0; transform: translateX(50px);}}
     100% {{opacity: 1; transform: translateX(0);}}
 }}
-
-/* Priority Colors */
 .priority-high {{background-color:#ff4b4b; color:white;}}
 .priority-medium {{background-color:#ffffff; color:black;}}
 .priority-low {{background-color:#111; color:white;}}
-
-/* Deadline */
-.deadline-text {{
-    font-weight: 600;
-}}
-
-/* Progress Bar */
-.progress-bar {{
-    height: 10px;
-    border-radius: 10px;
-    background: #e5e5e5;
-}}
-.progress-fill {{
-    height: 10px;
-    border-radius: 10px;
-    background: {PROG_FILL};
-}}
-
-/* Popup */
+.deadline-text {{font-weight: 600;}}
+.progress-bar {{height: 10px; border-radius: 10px; background: #e5e5e5;}}
+.progress-fill {{height: 10px; border-radius: 10px; background: {PROG_FILL};}}
 .popup {{
     position: fixed;
     top: 20px;
@@ -92,8 +74,6 @@ body {{
     from {{opacity:1;}}
     to {{opacity:0; transform: translateY(-20px);}}
 }}
-
-/* Animated Buttons */
 button:hover {{
     transform: scale(1.1);
     transition: transform 0.2s;
@@ -163,7 +143,7 @@ for i, task in enumerate(st.session_state.tasks):
     if filter_priority != "All" and task["priority"] != filter_priority:
         continue
 
-    # คำนวณ Progress จากงานย่อย
+    # Progress จากงานย่อย
     if task["subtasks"]:
         completed_sub = sum(1 for s in task["subtasks"] if s["completed"])
         progress = int(completed_sub / len(task["subtasks"]) * 100)
@@ -189,11 +169,7 @@ for i, task in enumerate(st.session_state.tasks):
         st.markdown(f"🔹 Priority: {task['priority']}")
         st.markdown("ความคืบหน้า:")
         st.markdown(
-            f"""
-            <div class="progress-bar">
-                <div class="progress-fill" style="width:{progress}%"></div>
-            </div>
-            """,
+            f"<div class='progress-bar'><div class='progress-fill' style='width:{progress}%'></div></div>",
             unsafe_allow_html=True
         )
 
@@ -242,6 +218,41 @@ if day_tasks:
         st.write(f"- {t['name']} (หมวดหมู่: {t['category']}, ความคืบหน้า: {progress}%)")
 else:
     st.info("ไม่มีงานในวันนี้")
+
+# -------------------- Dashboard --------------------
+st.subheader("📊 Dashboard สรุปงาน")
+if st.session_state.tasks:
+    df = pd.DataFrame(st.session_state.tasks)
+    progress_list = []
+    for idx, task in df.iterrows():
+        subs = task["subtasks"]
+        if subs:
+            completed_sub = sum(1 for s in subs if s["completed"])
+            progress = int(completed_sub / len(subs) * 100)
+        else:
+            progress = 100 if task["completed"] else 0
+        progress_list.append(progress)
+    df["Progress"] = progress_list
+    df["Completed"] = df["Progress"]==100
+
+    # Pie Chart
+    pie_fig = px.pie(df, names="Completed", title="งานเสร็จ/งานคงเหลือ")
+    st.plotly_chart(pie_fig, use_container_width=True)
+
+    # Bar Chart Category
+    if df["category"].notnull().any():
+        cat_count = df.groupby("category")["name"].count().reset_index()
+        bar_fig = px.bar(cat_count, x="category", y="name", title="จำนวนงานตาม Category", text="name")
+        st.plotly_chart(bar_fig, use_container_width=True)
+
+    # Export Excel
+    excel_file = "tasks_export.xlsx"
+    df_export = df.drop(columns=["subtasks","new"])
+    df_export.to_excel(excel_file, index=False)
+    with open(excel_file, "rb") as f:
+        st.download_button("📥 Export Excel", f, file_name=excel_file, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+else:
+    st.info("ยังไม่มีงานเพื่อแสดง Dashboard")
 
 # -------------------- Share Tasks --------------------
 st.subheader("📤 แชร์งานให้เพื่อน")
