@@ -19,7 +19,7 @@ else:
     TEXT = "#111"
     PROG_FILL = "#ff4b4b"
 
-# -------------------- CSS --------------------
+# -------------------- CSS + Snow + Gift --------------------
 st.markdown(f"""
 <style>
 body {{
@@ -79,29 +79,38 @@ button:hover {{
     transition: transform 0.2s;
 }}
 
-/* Snowfall Animation */
-.snowflake {{
+/* Snow + Gift Animation */
+.snowflake, .gift {{
   position: fixed;
   top: -10px;
   z-index: 9999;
   user-select: none;
   pointer-events: none;
-  color: white;
   font-size: 1.2em;
-  animation-name: fall;
-  animation-duration: 10s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   opacity: 0.8;
 }}
-@keyframes fall {{
+.snowflake {{
+  color: white;
+  animation-name: fallSnow;
+}}
+@keyframes fallSnow {{
   0% {{transform: translateY(0) translateX(0);}}
   100% {{transform: translateY(100vh) translateX(50px);}}
 }}
+.gift {{
+  animation-name: fallGift;
+}}
+@keyframes fallGift {{
+  0% {{transform: translateY(0) rotate(0deg);}}
+  100% {{transform: translateY(100vh) rotate(360deg);}}
+}}
 </style>
 <script>
-const count = 50;
-for(let i=0; i<count; i++){{
+const snowCount = 50;
+const giftCount = 20;
+for(let i=0; i<snowCount; i++){{
     const snow = document.createElement('div');
     snow.className = 'snowflake';
     snow.style.left = Math.random() * window.innerWidth + 'px';
@@ -109,6 +118,15 @@ for(let i=0; i<count; i++){{
     snow.style.fontSize = 12 + Math.random() * 24 + 'px';
     snow.innerHTML = '❄️';
     document.body.appendChild(snow);
+}}
+for(let i=0; i<giftCount; i++){{
+    const gift = document.createElement('div');
+    gift.className = 'gift';
+    gift.style.left = Math.random() * window.innerWidth + 'px';
+    gift.style.animationDuration = 6 + Math.random() * 6 + 's';
+    gift.style.fontSize = 18 + Math.random() * 24 + 'px';
+    gift.innerHTML = '🎁';
+    document.body.appendChild(gift);
 }}
 </script>
 """, unsafe_allow_html=True)
