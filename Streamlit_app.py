@@ -3,7 +3,7 @@ import json
 from datetime import datetime as dt, date
 
 # -------------------- Config --------------------
-st.set_page_config(page_title="Ultimate Mobile To-Do App", page_icon="📝", layout="wide")
+st.set_page_config(page_title="🎄 Ultimate Christmas To-Do App 📝", layout="wide")
 
 # -------------------- Dark Mode --------------------
 dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
@@ -13,10 +13,10 @@ if dark_mode:
     TEXT = "#e4e6eb"
     PROG_FILL = "#4caf50"
 else:
-    BG = "linear-gradient(120deg, #f6f9fc, #eef2f3)"
-    CARD_BG = "white"
+    BG = "linear-gradient(135deg, #ff4b4b, #28a745)"
+    CARD_BG = "rgba(255,255,255,0.9)"
     TEXT = "#111"
-    PROG_FILL = "#4caf50"
+    PROG_FILL = "#ff4b4b"
 
 # -------------------- CSS --------------------
 st.markdown(f"""
@@ -26,18 +26,17 @@ body {{
     color: {TEXT};
     font-family: 'Segoe UI', sans-serif;
 }}
-
-/* Task Card */
 .task-card {{
     background: {CARD_BG};
+    color: #111;
     padding: 18px;
     border-radius: 18px;
     margin-bottom: 15px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
     transition: all 0.3s ease;
 }}
 .task-card:hover {{
-    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
 }}
 .task-card.new {{
     animation: slideFade 0.7s ease-out;
@@ -46,39 +45,21 @@ body {{
     0% {{opacity: 0; transform: translateX(50px);}}
     100% {{opacity: 1; transform: translateX(0);}}
 }}
-
-/* Priority Colors */
-.priority-high {{background-color:#ff4b4b; color:white;}}
-.priority-medium {{background-color:#ffffff; color:black;}}
-.priority-low {{background-color:#111; color:white;}}
-
-/* Deadline */
-.deadline-text {{
-    font-weight: 600;
-}}
-
-/* Progress Bar */
-.progress-bar {{
-    height: 10px;
-    border-radius: 10px;
-    background: #e5e5e5;
-}}
-.progress-fill {{
-    height: 10px;
-    border-radius: 10px;
-    background: {PROG_FILL};
-}}
-
-/* Popup */
+.priority-high {{background-color:#ff0000; color:white;}}
+.priority-medium {{background-color:#28a745; color:white;}}
+.priority-low {{background-color:#FFD700; color:black;}}
+.deadline-text {{font-weight: 700; color:#d40000;}}
+.progress-bar {{height: 10px; border-radius: 10px; background: #eee;}}
+.progress-fill {{height: 10px; border-radius: 10px; background: {PROG_FILL};}}
 .popup {{
     position: fixed;
     top: 20px;
     right: 20px;
-    background: #4CAF50;
+    background: #28a745;
     color: white;
     padding: 15px 25px;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
     opacity: 0;
     transform: translateY(-20px);
     animation: popupShow 0.5s forwards, popupFadeOut 0.5s 2.5s forwards;
@@ -92,10 +73,8 @@ body {{
     from {{opacity:1;}}
     to {{opacity:0; transform: translateY(-20px);}}
 }}
-
-/* Animated Buttons */
 button:hover {{
-    transform: scale(1.1);
+    transform: scale(1.1) rotate(-2deg);
     transition: transform 0.2s;
 }}
 </style>
@@ -108,17 +87,17 @@ if "sound_played" not in st.session_state:
     st.session_state.sound_played = set()
 
 # -------------------- Title --------------------
-st.title("📝 Ultimate Mobile To-Do App")
+st.title("🎄 Ultimate Christmas To-Do App 📝")
 
 # -------------------- Add Task --------------------
 st.subheader("➕ เพิ่มงานใหม่")
 col1, col2, col3, col4 = st.columns([3,3,3,3])
 with col1:
-    task_name = st.text_input("ชื่องาน")
+    task_name = st.text_input("ชื่องาน 🎁")
 with col2:
     deadline = st.date_input("เดดไลน์", value=date.today())
 with col3:
-    category = st.text_input("หมวดหมู่")
+    category = st.text_input("หมวดหมู่ 🎄")
 with col4:
     priority = st.selectbox("Priority", ["High","Medium","Low"])
 num_sub = st.number_input("จำนวนงานย่อย", min_value=0, max_value=10, value=0, step=1)
@@ -138,7 +117,7 @@ if st.button("เพิ่มงาน"):
         "completed": False,
         "new": True
     })
-    st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
+    st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉🎄</div>", unsafe_allow_html=True)
 
 # -------------------- Filter --------------------
 st.subheader("🔎 กรองงาน")
@@ -150,7 +129,7 @@ total = len(st.session_state.tasks)
 done = sum(1 for t in st.session_state.tasks if t["completed"])
 if total > 0:
     st.progress(done / total)
-    st.write(f"✔ งานเสร็จแล้ว {done}/{total} งาน")
+    st.write(f"✔ งานเสร็จแล้ว {done}/{total} งาน 🎅")
 else:
     st.write("ยังไม่มีงาน")
 
@@ -163,14 +142,12 @@ for i, task in enumerate(st.session_state.tasks):
     if filter_priority != "All" and task["priority"] != filter_priority:
         continue
 
-    # คำนวณ Progress จากงานย่อย
     if task["subtasks"]:
         completed_sub = sum(1 for s in task["subtasks"] if s["completed"])
         progress = int(completed_sub / len(task["subtasks"]) * 100)
     else:
         progress = 0 if not task["completed"] else 100
 
-    # Priority color
     if task["priority"]=="High":
         card_class = "task-card new priority-high"
     elif task["priority"]=="Medium":
@@ -215,7 +192,7 @@ for i, task in enumerate(st.session_state.tasks):
         remaining_days = (deadline_date - today).days
         if remaining_days <= 1 and not task["completed"] and task["name"] not in st.session_state.sound_played:
             st.audio("https://upload.wikimedia.org/wikipedia/commons/c/cf/Alert-tone.mp3")
-            st.warning(f"⏰ งานนี้ใกล้ถึงเดดไลน์แล้ว!")
+            st.warning(f"⏰ งานนี้ใกล้ถึงเดดไลน์แล้ว! 🎅")
             st.session_state.sound_played.add(task["name"])
 
     with colB:
@@ -223,7 +200,7 @@ for i, task in enumerate(st.session_state.tasks):
             for sub in task["subtasks"]:
                 sub["completed"] = True
             task["completed"] = True
-            st.success("งานเสร็จแล้ว!")
+            st.success("งานเสร็จแล้ว! 🎄")
         st.write(" ")
         if st.button("🗑", key=f"delete{i}"):
             st.session_state.tasks.pop(i)
@@ -247,4 +224,5 @@ else:
 st.subheader("📤 แชร์งานให้เพื่อน")
 export_data = json.dumps(st.session_state.tasks, ensure_ascii=False, indent=2)
 st.code(export_data, language="json")
-st.info("เพื่อนนำ JSON นี้ไปวางในแอปเพื่อโหลดงานเข้าไปได้เลย")
+b64 = base64.b64encode(export_data.encode()).decode()
+st.markdown(f'<a href="data:application/json;base64,{b64}" download="tasks.json">Download JSON 🎁</a>', unsafe_allow_html=True)
