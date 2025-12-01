@@ -1,174 +1,45 @@
 import streamlit as st
-import json
-import datetime
-from datetime import datetime as dt
 
-st.set_page_config(page_title="To-Do App", page_icon="📝", layout="wide")
+st.set_page_config(page_title="To-Do App + Floating Button", layout="wide")
 
-# -------------------- CSS --------------------
+# ---------------- CSS Floating Button ----------------
 st.markdown("""
 <style>
-body {
-    background: linear-gradient(120deg, #f6f9fc, #eef2f3);
-    font-family: 'Segoe UI';
-}
-
-/* Task Card */
-.task-card {
-    background: white;
-    padding: 18px;
-    border-radius: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    transition: 0.3s;
-}
-.task-card:hover {
-    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-}
-
-/* New Card Animation */
-.task-card.new {
-    animation: cardPop 0.6s ease-out;
-}
-@keyframes cardPop {
-    0% { opacity: 0; transform: translateY(25px) scale(0.95); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* Deadline text */
-.deadline-text {
-    color: #ff4b4b;
-    font-weight: 600;
-}
-
-/* Progress bar */
-.progress-bar {
-    height: 10px;
-    border-radius: 10px;
-    background: #e5e5e5;
-}
-.progress-fill {
-    height: 10px;
-    border-radius: 10px;
-    background: #4CAF50;
-}
-
-/* Popup Notification */
-.popup {
+/* Floating Add Button */
+.floating-btn {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #4CAF50;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
     color: white;
-    padding: 15px 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    opacity: 0;
-    transform: translateY(-20px);
-    animation: popupFade 0.7s forwards;
+    border-radius: 50%;
+    border: none;
+    font-size: 32px;
+    text-align: center;
+    line-height: 60px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+    z-index: 999;
 }
-@keyframes popupFade {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+
+.floating-btn:hover {
+    transform: scale(1.1);
 }
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- Session State --------------------
-if "tasks" not in st.session_state:
-    st.session_state.tasks = []
+# ---------------- Button + Popup ----------------
+# เราจะใช้ st.markdown แทน button ปกติ
+st.markdown("""
+<button class="floating-btn" onclick="document.getElementById('input-section').scrollIntoView({behavior: 'smooth'});">+</button>
+""", unsafe_allow_html=True)
 
-# -------------------- Add Task --------------------
-st.title("📝 To-Do List App (Enhanced Version)")
-
-st.subheader("➕ เพิ่มงานใหม่")
-
-col1, col2 = st.columns(2)
-with col1:
-    task_name = st.text_input("ชื่องาน")
-with col2:
-    deadline = st.date_input("เดดไลน์", value=datetime.date.today())
-
-progress = st.slider("ความคืบหน้า (%)", 0, 100, 0)
-
+# ---------------- Input Section ----------------
+st.markdown("<div id='input-section'></div>", unsafe_allow_html=True)
+st.subheader("เพิ่มงานใหม่")
+task_name = st.text_input("ชื่องาน")
 if st.button("เพิ่มงาน"):
-    st.session_state.tasks.append({
-        "name": task_name,
-        "deadline": str(deadline),
-        "progress": progress,
-        "completed": False,
-        "new": True
-    })
-
-    st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
-
-# -------------------- Show Tasks --------------------
-st.subheader("📌 รายการงาน")
-
-now = dt.now().date()
-
-for i, task in enumerate(st.session_state.tasks):
-    deadline_date = dt.strptime(task["deadline"], "%Y-%m-%d").date()
-    remaining_days = (deadline_date - now).days
-
-    card_class = "task-card new" if task.get("new") else "task-card"
-    st.markdown(f"<div class='{card_class}'>", unsafe_allow_html=True)
-
-    colA, colB = st.columns([6, 1])
-
-    with colA:
-        st.markdown(f"### {task['name']}")
-        st.markdown(
-            f"🗓 เดดไลน์: <span class='deadline-text'>{task['deadline']}</span>",
-            unsafe_allow_html=True
-        )
-
-        st.markdown("ความคืบหน้า:")
-        st.markdown(
-            f"""
-            <div class="progress-bar">
-                <div class="progress-fill" style="width:{task['progress']}%"></div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        if remaining_days <= 1:
-            st.audio("https://upload.wikimedia.org/wikipedia/commons/c/cf/Alert-tone.mp3")
-            st.warning("⏰ งานนี้ใกล้ถึงเดดไลน์แล้ว!")
-
-    with colB:
-        if st.button("✔", key=f"done{i}"):
-            task["completed"] = True
-            st.success("งานเสร็จแล้ว!")
-
-        if st.button("🗑", key=f"delete{i}"):
-            st.session_state.tasks.pop(i)
-            st.rerun()
-
-    task["new"] = False
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# -------------------- Calendar --------------------
-st.subheader("📅 ปฏิทินงาน")
-
-calendar_date = st.date_input("เลือกวันที่เพื่อดูงานของวันนั้น", value=now)
-
-day_tasks = [
-    t for t in st.session_state.tasks
-    if t["deadline"] == str(calendar_date)
-]
-
-if day_tasks:
-    st.write("งานของวันนั้น:")
-    for t in day_tasks:
-        st.write("- ", t["name"])
-else:
-    st.write("ไม่มีงานในวันนี้")
-
-# -------------------- Share Tasks --------------------
-st.subheader("📤 แชร์งานให้เพื่อน")
-
-export_data = json.dumps(st.session_state.tasks)
-st.code(export_data, language="json")
-st.info("เพื่อนนำ JSON นี้ไปวางในแอปได้เลยเพื่อโหลดงานเข้าไป")
+    st.success(f"เพิ่มงาน: {task_name}")
