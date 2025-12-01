@@ -2,58 +2,79 @@ import streamlit as st
 import json
 from datetime import datetime as dt, date
 
-st.set_page_config(page_title="To-Do App Animated", page_icon="📝", layout="wide")
+st.set_page_config(page_title="To-Do App Pro", page_icon="📝", layout="wide")
+
+# ---------------- Dark / Light Mode ----------------
+dark_mode = st.checkbox("🌙 Dark Mode", value=False)
+if dark_mode:
+    bg_gradient = "linear-gradient(120deg, #232526, #414345)"
+    text_color = "#f0f0f0"
+    card_bg = "rgba(50,50,50,0.85)"
+    progress_fill = "#4CAF50"
+else:
+    bg_gradient = "linear-gradient(120deg, #f6f9fc, #eef2f3)"
+    text_color = "#000000"
+    card_bg = "rgba(255,255,255,0.9)"
+    progress_fill = "#4CAF50"
 
 # -------------------- CSS --------------------
-st.markdown("""
+st.markdown(f"""
 <style>
-body {
-    background: linear-gradient(120deg, #f6f9fc, #eef2f3);
+body {{
+    background: {bg_gradient};
+    color: {text_color};
     font-family: 'Segoe UI';
-}
+}}
 
 /* Task Card */
-.task-card {
-    background: white;
+.task-card {{
+    background: {card_bg};
     padding: 18px;
     border-radius: 15px;
     margin-bottom: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     transition: 0.3s;
-}
-.task-card:hover {
-    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-}
+}}
+.task-card:hover {{
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}}
 
 /* Animation: Slide-in + Fade */
-.task-card.new {
+.task-card.new {{
     animation: slideFade 0.7s ease-out;
-}
-@keyframes slideFade {
-    0% {opacity: 0; transform: translateX(50px);}
-    100% {opacity: 1; transform: translateX(0);}
-}
+}}
+.task-card.remove {{
+    animation: slideOut 0.5s forwards;
+}}
+@keyframes slideFade {{
+    0% {{opacity: 0; transform: translateX(50px);}}
+    100% {{opacity: 1; transform: translateX(0);}}
+}}
+@keyframes slideOut {{
+    0% {{opacity: 1; transform: translateX(0);}}
+    100% {{opacity: 0; transform: translateX(50px);}}
+}}
 
 /* Deadline text */
-.deadline-text {
+.deadline-text {{
     color: #ff4b4b;
     font-weight: 600;
-}
+}}
 
 /* Progress bar */
-.progress-bar {
+.progress-bar {{
     height: 10px;
     border-radius: 10px;
     background: #e5e5e5;
-}
-.progress-fill {
+}}
+.progress-fill {{
     height: 10px;
     border-radius: 10px;
-    background: #4CAF50;
-}
+    background: {progress_fill};
+}}
 
 /* Popup Notification */
-.popup {
+.popup {{
     position: fixed;
     top: 20px;
     right: 20px;
@@ -61,20 +82,26 @@ body {
     color: white;
     padding: 15px 25px;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
     opacity: 0;
     transform: translateY(-20px);
     animation: popupShow 0.5s forwards, popupFadeOut 0.5s 2.5s forwards;
     z-index:999;
-}
-@keyframes popupShow {
-    from {opacity: 0; transform: translateY(-20px);}
-    to {opacity: 1; transform: translateY(0);}
-}
-@keyframes popupFadeOut {
-    from {opacity:1;}
-    to {opacity:0; transform: translateY(-20px);}
-}
+}}
+@keyframes popupShow {{
+    from {{opacity: 0; transform: translateY(-20px);}}
+    to {{opacity: 1; transform: translateY(0);}}
+}}
+@keyframes popupFadeOut {{
+    from {{opacity:1;}}
+    to {{opacity:0; transform: translateY(-20px);}}
+}}
+
+/* Button hover animation */
+button:hover {{
+    transform: scale(1.1);
+    transition: transform 0.2s;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -83,7 +110,7 @@ if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
 # -------------------- Title --------------------
-st.title("📝 To-Do App Animated")
+st.title("📝 To-Do App Pro")
 
 # -------------------- Add Task --------------------
 st.subheader("➕ เพิ่มงานใหม่")
@@ -100,19 +127,23 @@ if st.button("เพิ่มงาน"):
         "deadline": str(deadline),
         "progress": progress,
         "completed": False,
-        "new": True
+        "new": True,
+        "remove": False
     })
-    # Popup แจ้งเตือน
     st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
 
 # -------------------- Show Tasks --------------------
 st.subheader("📌 รายการงาน")
 today = dt.now().date()
+
 for i, task in enumerate(st.session_state.tasks):
     deadline_date = dt.strptime(task["deadline"], "%Y-%m-%d").date()
     remaining_days = (deadline_date - today).days
 
     card_class = "task-card new" if task.get("new") else "task-card"
+    if task.get("remove"):
+        card_class += " remove"
+
     st.markdown(f"<div class='{card_class}'>", unsafe_allow_html=True)
 
     colA, colB = st.columns([6,1])
@@ -128,7 +159,6 @@ for i, task in enumerate(st.session_state.tasks):
             """,
             unsafe_allow_html=True
         )
-        # แจ้งเตือนเสียงถ้าใกล้เดดไลน์
         if remaining_days <= 1 and not task["completed"]:
             st.audio("https://upload.wikimedia.org/wikipedia/commons/c/cf/Alert-tone.mp3")
             st.warning(f"⏰ งานนี้ใกล้ถึงเดดไลน์แล้ว!")
@@ -138,8 +168,8 @@ for i, task in enumerate(st.session_state.tasks):
             task["completed"] = True
             st.success("งานเสร็จแล้ว!")
         if st.button("🗑", key=f"delete{i}"):
-            st.session_state.tasks.pop(i)
-            st.rerun()
+            task["remove"] = True
+            st.rerun()  # รอ animation slide-out ก่อนลบ
 
     task["new"] = False
     st.markdown("</div>", unsafe_allow_html=True)
