@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 from datetime import datetime as dt, date
+import base64
 
 # -------------------- Config --------------------
 st.set_page_config(page_title="🎄 Ultimate Christmas To-Do App 📝", layout="wide")
@@ -77,7 +78,39 @@ button:hover {{
     transform: scale(1.1) rotate(-2deg);
     transition: transform 0.2s;
 }}
+
+/* Snowfall Animation */
+.snowflake {{
+  position: fixed;
+  top: -10px;
+  z-index: 9999;
+  user-select: none;
+  pointer-events: none;
+  color: white;
+  font-size: 1.2em;
+  animation-name: fall;
+  animation-duration: 10s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  opacity: 0.8;
+}}
+@keyframes fall {{
+  0% {{transform: translateY(0) translateX(0);}}
+  100% {{transform: translateY(100vh) translateX(50px);}}
+}}
 </style>
+<script>
+const count = 50;
+for(let i=0; i<count; i++){{
+    const snow = document.createElement('div');
+    snow.className = 'snowflake';
+    snow.style.left = Math.random() * window.innerWidth + 'px';
+    snow.style.animationDuration = 5 + Math.random() * 5 + 's';
+    snow.style.fontSize = 12 + Math.random() * 24 + 'px';
+    snow.innerHTML = '❄️';
+    document.body.appendChild(snow);
+}}
+</script>
 """, unsafe_allow_html=True)
 
 # -------------------- Session State --------------------
