@@ -1,22 +1,126 @@
 import streamlit as st
 import json
 from datetime import datetime as dt, date
-import pandas as pd
-import plotly.express as px
-import base64
 
-st.set_page_config(page_title="Ultimate Mobile To-Do App", layout="wide")
+# -------------------- Config --------------------
+st.set_page_config(page_title="Ultimate Mobile To-Do App", page_icon="📝", layout="wide")
+
+# -------------------- Dark Mode --------------------
+dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
+if dark_mode:
+    BG = "#1c1c1c"
+    CARD_BG = "#2c2f33"
+    TEXT = "#e4e6eb"
+    PROG_FILL = "#4caf50"
+else:
+    BG = "linear-gradient(120deg, #f6f9fc, #eef2f3)"
+    CARD_BG = "white"
+    TEXT = "#111"
+    PROG_FILL = "#4caf50"
+
+# -------------------- CSS --------------------
+st.markdown(f"""
+<style>
+body {{
+    background: {BG};
+    color: {TEXT};
+    font-family: 'Segoe UI', sans-serif;
+}}
+
+/* Task Card */
+.task-card {{
+    background: {CARD_BG};
+    padding: 18px;
+    border-radius: 18px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}}
+.task-card:hover {{
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}}
+.task-card.new {{
+    animation: slideFade 0.7s ease-out;
+}}
+@keyframes slideFade {{
+    0% {{opacity: 0; transform: translateX(50px);}}
+    100% {{opacity: 1; transform: translateX(0);}}
+}}
+
+/* Priority Colors */
+.priority-high {{background-color:#ff4b4b; color:white;}}
+.priority-medium {{background-color:#ffffff; color:black;}}
+.priority-low {{background-color:#111; color:white;}}
+
+/* Deadline */
+.deadline-text {{
+    font-weight: 600;
+}}
+
+/* Progress Bar */
+.progress-bar {{
+    height: 10px;
+    border-radius: 10px;
+    background: #e5e5e5;
+}}
+.progress-fill {{
+    height: 10px;
+    border-radius: 10px;
+    background: {PROG_FILL};
+}}
+
+/* Popup */
+.popup {{
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: popupShow 0.5s forwards, popupFadeOut 0.5s 2.5s forwards;
+    z-index:999;
+}}
+@keyframes popupShow {{
+    from {{opacity: 0; transform: translateY(-20px);}}
+    to {{opacity: 1; transform: translateY(0);}}
+}}
+@keyframes popupFadeOut {{
+    from {{opacity:1;}}
+    to {{opacity:0; transform: translateY(-20px);}}
+}}
+
+/* Animated Buttons */
+button:hover {{
+    transform: scale(1.1);
+    transition: transform 0.2s;
+}}
+</style>
+""", unsafe_allow_html=True)
 
 # -------------------- Session State --------------------
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
+if "sound_played" not in st.session_state:
+    st.session_state.sound_played = set()
 
-st.title("📝 Ultimate To-Do App (Safe Version)")
+# -------------------- Title --------------------
+st.title("📝 Ultimate Mobile To-Do App")
 
 # -------------------- Add Task --------------------
-task_name = st.text_input("ชื่องาน")
-deadline = st.date_input("เดดไลน์", value=date.today())
-priority = st.selectbox("Priority", ["High","Medium","Low"])
+st.subheader("➕ เพิ่มงานใหม่")
+col1, col2, col3, col4 = st.columns([3,3,3,3])
+with col1:
+    task_name = st.text_input("ชื่องาน")
+with col2:
+    deadline = st.date_input("เดดไลน์", value=date.today())
+with col3:
+    category = st.text_input("หมวดหมู่")
+with col4:
+    priority = st.selectbox("Priority", ["High","Medium","Low"])
 num_sub = st.number_input("จำนวนงานย่อย", min_value=0, max_value=10, value=0, step=1)
 
 subtasks = []
@@ -28,61 +132,119 @@ if st.button("เพิ่มงาน"):
     st.session_state.tasks.append({
         "name": task_name,
         "deadline": str(deadline),
+        "category": category.strip(),
         "priority": priority,
         "subtasks": subtasks,
         "completed": False,
         "new": True
     })
-    st.success("เพิ่มงานสำเร็จ!")
+    st.markdown("<div class='popup'>เพิ่มงานสำเร็จ! 🎉</div>", unsafe_allow_html=True)
+
+# -------------------- Filter --------------------
+st.subheader("🔎 กรองงาน")
+filter_category = st.text_input("กรองตามหมวดหมู่")
+filter_priority = st.selectbox("กรองตาม Priority", ["All","High","Medium","Low"])
+
+# -------------------- Progress Summary --------------------
+total = len(st.session_state.tasks)
+done = sum(1 for t in st.session_state.tasks if t["completed"])
+if total > 0:
+    st.progress(done / total)
+    st.write(f"✔ งานเสร็จแล้ว {done}/{total} งาน")
+else:
+    st.write("ยังไม่มีงาน")
 
 # -------------------- Show Tasks --------------------
 st.subheader("📌 รายการงาน")
+today = dt.now().date()
 for i, task in enumerate(st.session_state.tasks):
-    # Progress จาก sub-task
+    if filter_category and task["category"] != filter_category:
+        continue
+    if filter_priority != "All" and task["priority"] != filter_priority:
+        continue
+
+    # คำนวณ Progress จากงานย่อย
     if task["subtasks"]:
         completed_sub = sum(1 for s in task["subtasks"] if s["completed"])
         progress = int(completed_sub / len(task["subtasks"]) * 100)
     else:
-        progress = 100 if task["completed"] else 0
+        progress = 0 if not task["completed"] else 100
 
-    st.markdown(f"### {task['name']} (Priority: {task['priority']})")
-    st.markdown(f"🗓 เดดไลน์: {task['deadline']}")
-    st.progress(progress)
+    # Priority color
+    if task["priority"]=="High":
+        card_class = "task-card new priority-high"
+    elif task["priority"]=="Medium":
+        card_class = "task-card new priority-medium"
+    else:
+        card_class = "task-card new priority-low"
 
-    for j, sub in enumerate(task["subtasks"]):
-        if st.checkbox(sub["name"], key=f"{i}_sub_{j}", value=sub["completed"]):
-            sub["completed"] = True
+    st.markdown(f"<div class='{card_class}'>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
+    colA, colB = st.columns([6,1])
+    with colA:
+        st.markdown(f"### {task['name']}")
+        st.markdown(f"🗓 เดดไลน์: <span class='deadline-text'>{task['deadline']}</span>", unsafe_allow_html=True)
+        if task["category"]:
+            st.markdown(f"📂 หมวดหมู่: {task['category']}")
+        st.markdown(f"🔹 Priority: {task['priority']}")
+        st.markdown("ความคืบหน้า:")
+        st.markdown(
+            f"""
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:{progress}%"></div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # Sub-task
+        if task["subtasks"]:
+            st.markdown("**งานย่อย:**")
+            for j, sub in enumerate(task["subtasks"]):
+                col1, col2 = st.columns([8,2])
+                with col1:
+                    st.write(sub["name"])
+                with col2:
+                    if st.checkbox("✔", key=f"{i}_sub_{j}", value=sub["completed"]):
+                        sub["completed"] = True
+                    else:
+                        sub["completed"] = False
+
+        # แจ้งเตือนเสียง
+        deadline_date = dt.strptime(task["deadline"], "%Y-%m-%d").date()
+        remaining_days = (deadline_date - today).days
+        if remaining_days <= 1 and not task["completed"] and task["name"] not in st.session_state.sound_played:
+            st.audio("https://upload.wikimedia.org/wikipedia/commons/c/cf/Alert-tone.mp3")
+            st.warning(f"⏰ งานนี้ใกล้ถึงเดดไลน์แล้ว!")
+            st.session_state.sound_played.add(task["name"])
+
+    with colB:
         if st.button("✔", key=f"done{i}"):
+            for sub in task["subtasks"]:
+                sub["completed"] = True
             task["completed"] = True
-    with col2:
+            st.success("งานเสร็จแล้ว!")
+        st.write(" ")
         if st.button("🗑", key=f"delete{i}"):
             st.session_state.tasks.pop(i)
-            st.experimental_rerun()
+            st.rerun()
 
-# -------------------- Heatmap Calendar --------------------
-st.subheader("📅 Heatmap Calendar")
-if st.session_state.tasks:
-    df = pd.DataFrame(st.session_state.tasks)
-    df['count'] = 1
-    df['deadline'] = pd.to_datetime(df['deadline'])
-    heatmap_data = df.groupby(df['deadline'].dt.date)['count'].sum().reset_index()
-    heatmap_data.rename(columns={'deadline':'Date','count':'Tasks'}, inplace=True)
-    heatmap_fig = px.density_heatmap(
-        heatmap_data,
-        x=heatmap_data['Date'],
-        y=['Tasks']*len(heatmap_data),
-        z='Tasks',
-        labels={'x':'Date','y':'Tasks','z':'จำนวนงาน'},
-        title="จำนวนงานต่อวัน"
-    )
-    st.plotly_chart(heatmap_fig, use_container_width=True)
+    task["new"] = False
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# -------------------- Share Tasks / Export JSON --------------------
-st.subheader("📤 แชร์งาน")
+# -------------------- Calendar --------------------
+st.subheader("📅 ปฏิทินงาน")
+calendar_date = st.date_input("เลือกวันที่เพื่อดูงานของวันนั้น", value=today)
+day_tasks = [t for t in st.session_state.tasks if t["deadline"] == str(calendar_date)]
+if day_tasks:
+    st.write("งานของวันนั้น:")
+    for t in day_tasks:
+        st.write(f"- {t['name']} (หมวดหมู่: {t['category']}, ความคืบหน้า: {progress}%)")
+else:
+    st.info("ไม่มีงานในวันนี้")
+
+# -------------------- Share Tasks --------------------
+st.subheader("📤 แชร์งานให้เพื่อน")
 export_data = json.dumps(st.session_state.tasks, ensure_ascii=False, indent=2)
 st.code(export_data, language="json")
-b64 = base64.b64encode(export_data.encode()).decode()
-st.markdown(f'<a href="data:application/json;base64,{b64}" download="tasks.json">Download JSON</a>', unsafe_allow_html=True)
+st.info("เพื่อนนำ JSON นี้ไปวางในแอปเพื่อโหลดงานเข้าไปได้เลย")
